@@ -2,6 +2,10 @@ FROM debian/eol:wheezy
 LABEL name="homebrew/debian7"
 ARG DEBIAN_FRONTEND=noninteractive
 
+ENV HOMEBREW_ON_DEBIAN7=1
+ENV HOMEBREW_CURL_PATH=/usr/bin/curl
+ENV HOMEBREW_GIT_PATH=/usr/bin/git
+
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -43,7 +47,16 @@ WORKDIR /home/linuxbrew
 ENV PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH \
     SHELL=/bin/bash
 
-RUN git clone https://github.com/Homebrew/brew /home/linuxbrew/.linuxbrew/Homebrew \
-     && mkdir /home/linuxbrew/.linuxbrew/bin \
-     && ln -s ../Homebrew/bin/brew /home/linuxbrew/.linuxbrew/bin/ \
-     && brew config
+RUN git clone https://github.com/Homebrew/brew /home/linuxbrew/.linuxbrew/Homebrew
+
+# hadolint ignore=DL3003
+RUN cd /home/linuxbrew/.linuxbrew \
+  && mkdir -p bin etc include lib opt sbin share var/homebrew/linked Cellar \
+  && ln -s ../Homebrew/bin/brew /home/linuxbrew/.linuxbrew/bin/ \
+  && HOMEBREW_NO_ANALYTICS=1 HOMEBREW_NO_AUTO_UPDATE=1 brew tap homebrew/core \
+  && brew cleanup \
+  && { git -C /home/linuxbrew/.linuxbrew/Homebrew config --unset gc.auto; true; } \
+  && { git -C /home/linuxbrew/.linuxbrew/Homebrew config --unset homebrew.devcmdrun; true; } \
+  && rm -rf ~/.cache \
+  && chown -R linuxbrew: /home/linuxbrew/.linuxbrew \
+  && chmod -R g+w,o-w /home/linuxbrew/.linuxbrew
